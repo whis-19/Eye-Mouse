@@ -5,7 +5,8 @@ import threading
 import time
 
 # Control loop variable
-isRunning = True
+isRunning = threading.Event()
+isRunning.set()
 
 # Initialize video capture and face mesh
 cam = cv2.VideoCapture(0)

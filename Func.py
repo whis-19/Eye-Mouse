@@ -7,7 +7,7 @@ def detectLandmarks(frame):
     return output.multi_face_landmarks if output.multi_face_landmarks else None
 
 def moveMouse(landmarks, frameWidth, frameHeight):
-    for id, landmark in enumerate(landmarks[474:478]):
+    for id, landmark in enumerate(landmarks):
         if id == 1:
             screenX = screenWidth * landmark.x
             screenY = screenHeight * landmark.y
@@ -28,7 +28,7 @@ def detectBlinks(landmarks):
         time.sleep(1)
 
 def drawLandmarks(frame, landmarks):
-    for id, landmark in enumerate(landmarks[474:478]):
+    for id, landmark in enumerate(landmarks):
         x = int(landmark.x * frame.shape[1])
         y = int(landmark.y * frame.shape[0])
         cv2.circle(frame, (x, y), 3, (0, 255, 0), -1)
@@ -46,32 +46,35 @@ def drawLandmarks(frame, landmarks):
 def eyeControlledMouse():
     global isRunning
     
-    while isRunning:
-        ret, frame = cam.read()
-        if not ret:
-            continue
+    while isRunning.is_set():
+        try:
+            ret, frame = cam.read()
+            if not ret:
+                continue
 
-        frame = cv2.flip(frame, 1)
-        landmarks = detectLandmarks(frame)
+            frame = cv2.flip(frame, 1)
+            landmarks = detectLandmarks(frame)
 
-        if landmarks:
-            moveMouse(landmarks[0].landmark, frame.shape[1], frame.shape[0])
-            detectBlinks(landmarks[0].landmark)
-            drawLandmarks(frame, landmarks[0].landmark)
+            if landmarks:
+                moveMouse(landmarks[0].landmark, frame.shape[1], frame.shape[0])
+                detectBlinks(landmarks[0].landmark)
+                drawLandmarks(frame, landmarks[0].landmark)
 
-        cv2.imshow('Eye Controlled Mouse', frame)
-        if cv2.waitKey(1) & 0xFF == ord('q'):
-            isRunning = False
+            cv2.imshow('Eye Controlled Mouse', frame)
+            if cv2.waitKey(1) & 0xFF == ord('q'):
+                isRunning.clear()
+        except Exception as e:
+            print(f"Error: {e}")
     
     cam.release()
     cv2.destroyAllWindows()
 
-
-
 def startEyeControlledMouse():
-    return runInThread(eyeControlledMouse)
+    thread = threading.Thread(target=eyeControlledMouse )
+    thread.start()
+    return thread
 
 def stopEyeControlledMouse(thread):
     global isRunning
-    isRunning = False
+    isRunning.clear()
     thread.join()
