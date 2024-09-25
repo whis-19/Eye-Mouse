@@ -3,6 +3,8 @@ import mediapipe as mp
 import pyautogui
 import threading
 import time
+import keyboard
+
 
 # Control loop variable
 isRunning = threading.Event()
