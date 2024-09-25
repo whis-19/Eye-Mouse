@@ -78,3 +78,10 @@ def stopEyeControlledMouse(thread):
     global isRunning
     isRunning.clear()
     thread.join()
+
+
+def inputBuffer():
+    while isRunning.is_set():
+        userInput = input()  
+        if userInput.lower() == 'exit':
+            isRunning.clear() 
