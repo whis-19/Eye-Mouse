@@ -3,12 +3,16 @@ from Func import *
 # Main program
 if __name__ == "__main__":
     thread = startEyeControlledMouse()
-    isRunning.set()  # Set the flag to True
+    isRunning.set() 
+
+  
+    listener_thread = threading.Thread(target=inputBuffer)
+    listener_thread.start()
 
     try:
         while isRunning.is_set():
-            if keyboard.is_pressed('del'):  # Check if 'del' key is pressed
-                isRunning.clear()  # Clear the flag to exit the loop
-            time.sleep(0.1)
+            time.sleep(0.1)  
     except KeyboardInterrupt:
         stopEyeControlledMouse(thread)
+
+    listener_thread.join()  
