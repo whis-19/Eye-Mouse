@@ -1,10 +1,13 @@
 from Threading import *
 
-
 def preprocessFrame(frame):
     hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
-    hsv[..., 2] = cv2.normalize(hsv[..., 2], None, alpha=0, beta=255, norm_type=cv2.NORM_MINMAX)
+    
+    hsv[..., 2] = cv2.normalize(hsv[..., 2], None, alpha=50, beta=255, norm_type=cv2.NORM_MINMAX)
+    clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
+    hsv[..., 2] = clahe.apply(hsv[..., 2])
     return cv2.cvtColor(hsv, cv2.COLOR_HSV2BGR)
+
 
 def detectLandmarks(frame):
     rgbFrame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
