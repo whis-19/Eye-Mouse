@@ -1,23 +1,30 @@
 from Threading import *
 
 
+def preprocessFrame(frame):
+    hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+    hsv[..., 2] = cv2.normalize(hsv[..., 2], None, alpha=0, beta=255, norm_type=cv2.NORM_MINMAX)
+    return cv2.cvtColor(hsv, cv2.COLOR_HSV2BGR)
+
 def detectLandmarks(frame):
     rgbFrame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
     output = faceMesh.process(rgbFrame)
     return output.multi_face_landmarks if output.multi_face_landmarks else None
 
-def moveMouse(landmarks, frameWidth, frameHeight):
-    for id, landmark in enumerate(landmarks):
-        if id == 1:
-            screenX = screenWidth * landmark.x
-            screenY = screenHeight * landmark.y
-            pyautogui.moveTo(screenX, screenY)
+def moveMouse(landmarks):
+    if landmarks:
+        screenX = screenWidth * landmarks[1].x
+        screenY = screenHeight * landmarks[1].y
+        current_x, current_y = pyautogui.position()
+        smooth_x = current_x + (screenX - current_x) * 0.1
+        smooth_y = current_y + (screenY - current_y) * 0.1
+        pyautogui.moveTo(smooth_x, smooth_y)
 
 def detectBlinks(landmarks):
     leftEye = [landmarks[145], landmarks[159]]
     rightEye = [landmarks[374], landmarks[386]]
-    leftBlink = (leftEye[0].y - leftEye[1].y) < 0.004
-    rightBlink = (rightEye[0].y - rightEye[1].y) < 0.004
+    leftBlink = (leftEye[0].y - leftEye[1].y) < 0.005  
+    rightBlink = (rightEye[0].y - rightEye[1].y) < 0.005  
     # Left Click
     if leftBlink:
         pyautogui.click(button='left')
@@ -53,10 +60,12 @@ def eyeControlledMouse():
                 continue
 
             frame = cv2.flip(frame, 1)
+            frame = preprocessFrame(frame)  # Apply preprocessing
+            
             landmarks = detectLandmarks(frame)
 
             if landmarks:
-                moveMouse(landmarks[0].landmark, frame.shape[1], frame.shape[0])
+                moveMouse(landmarks[0].landmark)
                 detectBlinks(landmarks[0].landmark)
                 drawLandmarks(frame, landmarks[0].landmark)
 
@@ -70,7 +79,7 @@ def eyeControlledMouse():
     cv2.destroyAllWindows()
 
 def startEyeControlledMouse():
-    thread = threading.Thread(target=eyeControlledMouse )
+    thread = threading.Thread(target=eyeControlledMouse)
     thread.start()
     return thread
 
@@ -78,7 +87,6 @@ def stopEyeControlledMouse(thread):
     global isRunning
     isRunning.clear()
     thread.join()
-
 
 def inputBuffer():
     while isRunning.is_set():
