@@ -23,8 +23,8 @@ def moveMouse(landmarks):
 def detectBlinks(landmarks):
     leftEye = [landmarks[145], landmarks[159]]
     rightEye = [landmarks[374], landmarks[386]]
-    leftBlink = (leftEye[0].y - leftEye[1].y) < 0.005  
-    rightBlink = (rightEye[0].y - rightEye[1].y) < 0.005  
+    leftBlink = (leftEye[0].y - leftEye[1].y) < 0.005 
+    rightBlink = (rightEye[0].y - rightEye[1].y) < 0.005 
     # Left Click
     if leftBlink:
         pyautogui.click(button='left')
@@ -50,17 +50,16 @@ def drawLandmarks(frame, landmarks):
         y = int(landmark.y * frame.shape[0])
         cv2.circle(frame, (x, y), 3, (0, 255, 255), -1)
 
+
 def eyeControlledMouse():
-    global isRunning
-    
-    while isRunning.is_set():
+    while True:
         try:
             ret, frame = cam.read()
             if not ret:
                 continue
 
             frame = cv2.flip(frame, 1)
-            frame = preprocessFrame(frame)  # Apply preprocessing
+            frame = preprocessFrame(frame)  
             
             landmarks = detectLandmarks(frame)
 
@@ -71,25 +70,10 @@ def eyeControlledMouse():
 
             cv2.imshow('Eye Controlled Mouse', frame)
             if cv2.waitKey(1) & 0xFF == ord('q'):
-                isRunning.clear()
+                break
         except Exception as e:
             print(f"Error: {e}")
+            break
     
     cam.release()
     cv2.destroyAllWindows()
-
-def startEyeControlledMouse():
-    thread = threading.Thread(target=eyeControlledMouse)
-    thread.start()
-    return thread
-
-def stopEyeControlledMouse(thread):
-    global isRunning
-    isRunning.clear()
-    thread.join()
-
-def inputBuffer():
-    while isRunning.is_set():
-        userInput = input()  
-        if userInput.lower() == 'exit':
-            isRunning.clear() 
