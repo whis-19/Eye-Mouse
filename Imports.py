@@ -5,6 +5,10 @@ import threading
 import time
 import keyboard
 
+# import os
+# os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
+
+
 
 # Control loop variable
 
