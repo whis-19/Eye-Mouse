@@ -1,5 +1,7 @@
 from Threading import *
 
+
+
 def preprocessFrame(frame):
     hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
     hsv[..., 2] = cv2.normalize(hsv[..., 2], None, alpha=50, beta=255, norm_type=cv2.NORM_MINMAX)
@@ -24,10 +26,12 @@ def detectBlinks(landmarks):
     rightEye = [landmarks[374], landmarks[386]]
     leftBlink = (leftEye[0].y - leftEye[1].y) < 0.005 
     rightBlink = (rightEye[0].y - rightEye[1].y) < 0.005 
+
     # Left Click
     if leftBlink:
         pyautogui.click(button='left')
         time.sleep(1)  # Avoid multiple clicks
+
     # Right Click
     if rightBlink:
         pyautogui.click(button='right')
@@ -39,7 +43,7 @@ def drawLandmarks(frame, landmarks):
         y = int(landmark.y * frame.shape[0])
         cv2.circle(frame, (x, y), 3, (0, 255, 0), -1)
 
-
+    # Highlight eyes
     for landmark in [landmarks[145], landmarks[159]]:
         x = int(landmark.x * frame.shape[1])
         y = int(landmark.y * frame.shape[0])
@@ -73,3 +77,4 @@ def eyeControlledMouse():
 
     cam.release()
     cv2.destroyAllWindows()
+
