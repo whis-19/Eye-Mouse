@@ -1,8 +1,7 @@
 from Threading import *
 
 
-
-# Frame Preprocessing
+# Preprocess frame
 def preprocessFrame(frame):
     hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
     hsv[..., 2] = cv2.normalize(hsv[..., 2], None, alpha=50, beta=255, norm_type=cv2.NORM_MINMAX)
@@ -10,64 +9,53 @@ def preprocessFrame(frame):
     hsv[..., 2] = clahe.apply(hsv[..., 2])
     return cv2.cvtColor(hsv, cv2.COLOR_HSV2BGR)
 
-# Detect Landmarks
+# Detect landmarks
 def detectLandmarks(frame):
     rgbFrame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
     output = faceMesh.process(rgbFrame)
     return output.multi_face_landmarks if output.multi_face_landmarks else None
 
-# Head Movement Detection for Mouse Control and Visual Cursor
-def moveMouseWithHead(landmarks, frame):
-    if landmarks:
-        nose_landmark = landmarks[1]  # Nose landmark (typically used for head tracking)
-        screenX = screenWidth * nose_landmark.x
-        screenY = screenHeight * nose_landmark.y
-        current_x, current_y = pyautogui.position()
-        
-        # Smoothing for smoother cursor movement
-        smooth_x = current_x + (screenX - current_x) * 0.1
-        smooth_y = current_y + (screenY - current_y) * 0.1
 
-        # Move the real system mouse
-        pyautogui.moveTo(smooth_x, smooth_y)
 
-        # Draw a circle on the frame to represent the visual cursor
-        cv2.circle(frame, (int(smooth_x), int(smooth_y)), 10, (255, 0, 0), -1)  # Blue circle as cursor
 
-# Detect Blinks (Optional, but you can keep it)
-def detectBlinks(landmarks):
-    leftEye = [landmarks[145], landmarks[159]]
-    rightEye = [landmarks[374], landmarks[386]]
-    leftBlink = (leftEye[0].y - leftEye[1].y) < 0.005 
-    rightBlink = (rightEye[0].y - rightEye[1].y) < 0.005 
+def moveMouseWithEye(landmarks):
+    # Use landmarks for right eye (using points from Mediapipe FaceMesh)
+    rightEye = [landmarks[474], landmarks[475], landmarks[476], landmarks[477]]  # Iris landmarks
+    eyeLeftCorner = landmarks[33]  # Outer corner of the right eye
+    eyeRightCorner = landmarks[133]  # Inner corner of the right eye
+
+    # Calculate the relative movement of the iris within the eye
+    eyeWidth = eyeRightCorner.x - eyeLeftCorner.x
+    irisCenterX = sum([p.x for p in rightEye]) / len(rightEye)
     
-    # Left Click
-    if leftBlink:
-        pyautogui.click(button='left')
-        time.sleep(1)
-    # Right Click
-    if rightBlink:
-        pyautogui.click(button='right')
-        time.sleep(1)
+    # Map eye movement to screen coordinates
+    relativeX = (irisCenterX - eyeLeftCorner.x) / eyeWidth  # Horizontal ratio
+    screenX = screenWidth * (1 - relativeX)  # Move the cursor inversely for natural movement
+    
+    # Move the cursor on the Y axis if needed (can be refined with eye height)
+    irisCenterY = sum([p.y for p in rightEye]) / len(rightEye)
+    screenY = screenHeight * irisCenterY
+    
+    # Move the actual cursor
+    pyautogui.moveTo(screenX, screenY)
+    
+    # Print current cursor position
+    current_cursor_position = pyautogui.position()  # Get the current cursor position
+    print(f"Cursor moved to: {current_cursor_position}")  # Print the cursor position
 
-# Drawing landmarks for visualization
+# Draw landmarks on the frame for visualization
 def drawLandmarks(frame, landmarks):
     for id, landmark in enumerate(landmarks):
         x = int(landmark.x * frame.shape[1])
         y = int(landmark.y * frame.shape[0])
-        cv2.circle(frame, (x, y), 3, (0, 255, 0), -1)
+        cv2.circle(frame, (x, y), 2, (0, 255, 0), -1)
 
-    for landmark in [landmarks[145], landmarks[159]]:  # Left eye
+    for landmark in [landmarks[145], landmarks[159], landmarks[474], landmarks[475]]:
         x = int(landmark.x * frame.shape[1])
         y = int(landmark.y * frame.shape[0])
         cv2.circle(frame, (x, y), 3, (0, 255, 255), -1)
 
-    for landmark in [landmarks[374], landmarks[386]]:  # Right eye
-        x = int(landmark.x * frame.shape[1])
-        y = int(landmark.y * frame.shape[0])
-        cv2.circle(frame, (x, y), 3, (0, 255, 255), -1)
-
-# Eye/Head Controlled Mouse in a Thread
+# Eye controlled mouse function
 def eyeControlledMouse():
     while True:
         try:
@@ -75,18 +63,19 @@ def eyeControlledMouse():
             if not ret:
                 continue
 
-            frame = cv2.flip(frame, 1)  # Flip horizontally for natural interaction
+            frame = cv2.flip(frame, 1)  # Flip horizontally for a mirrored view
             frame = preprocessFrame(frame)  # Optional preprocessing
 
             landmarks = detectLandmarks(frame)  # Detect facial landmarks
 
             if landmarks:
-                moveMouseWithHead(landmarks[0].landmark, frame)  # Move mouse and show visual cursor
-                detectBlinks(landmarks[0].landmark)  # Optional blink detection
-                drawLandmarks(frame, landmarks[0].landmark)  # Draw landmarks for debugging
+                # Move mouse based on eye landmarks (iris/retina)
+                moveMouseWithEye(landmarks[0].landmark)
+                # Draw landmarks for visualization
+                drawLandmarks(frame, landmarks[0].landmark)
 
-            # Display the frame
-            cv2.imshow('Head Controlled Mouse with Visual Cursor', frame)
+            # Show webcam feed with landmarks
+            cv2.imshow('Eye Controlled Mouse', frame)
 
             # Quit on 'q' key
             if cv2.waitKey(1) & 0xFF == ord('q'):
@@ -97,3 +86,5 @@ def eyeControlledMouse():
 
     cam.release()
     cv2.destroyAllWindows()
+
+
