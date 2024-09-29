@@ -1,5 +1,6 @@
 from Threading import *
 
+
 def preprocessFrame(frame):
     hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
     hsv[..., 2] = cv2.normalize(hsv[..., 2], None, alpha=50, beta=255, norm_type=cv2.NORM_MINMAX)
@@ -12,7 +13,6 @@ def detectLandmarks(frame):
     output = faceMesh.process(rgbFrame)
     return output.multi_face_landmarks if output.multi_face_landmarks else None
 
-
 def drawLandmarks(frame, landmarks):
     for id, landmark in enumerate(landmarks):
         x = int(landmark.x * frame.shape[1])
@@ -22,6 +22,20 @@ def drawLandmarks(frame, landmarks):
         x = int(landmark.x * frame.shape[1])
         y = int(landmark.y * frame.shape[0])
         cv2.circle(frame, (x, y), 3, (0, 255, 255), -1)
+
+def detectBlink(landmarks):
+    leftEyeTop = landmarks[145].y
+    leftEyeBottom = landmarks[159].y
+    rightEyeTop = landmarks[386].y
+    rightEyeBottom = landmarks[374].y
+    
+    leftEyeEAR = leftEyeBottom - leftEyeTop
+    rightEyeEAR = rightEyeBottom - rightEyeTop
+    
+    blinkThreshold = 0.02
+    if leftEyeEAR < blinkThreshold and rightEyeEAR < blinkThreshold:
+        return True
+    return False
 
 def moveMouseWithEye(landmarks):
     rightEye = [landmarks[474], landmarks[475], landmarks[476], landmarks[477]]
@@ -38,23 +52,21 @@ def moveMouseWithEye(landmarks):
     print(f"Cursor moved to: {current_cursor_position}")
 
 
-
-
-
 def moveMouseWithNose(landmarks):
     noseTip = landmarks[1]
     noseX = noseTip.x 
     noseY = noseTip.y  
     screenX = screenWidth * noseX
     screenY = screenHeight * noseY
-    print(f"Nose X: {noseX}, Nose Y: {noseY}")
-    print(f"Screen X: {screenX}, Screen Y: {screenY}")
     pyautogui.moveTo(screenX, screenY)
     current_cursor_position = pyautogui.position()
     print(f"Cursor moved to: {current_cursor_position}")
+    
 
-
-
+def moveMouseWithNoseAndBlink(landmarks):
+    moveMouseWithNose(landmarks)
+    if detectBlink(landmarks):
+        pyautogui.click()
 
 def eyeControlledMouse():
     while True:
@@ -78,7 +90,7 @@ def eyeControlledMouse():
     cam.release()
     cv2.destroyAllWindows()
 
-def noseControlledMouse():
+def noseControlledMouseWithBlink():
     while True:
         try:
             ret, frame = cam.read()
@@ -88,9 +100,9 @@ def noseControlledMouse():
             frame = preprocessFrame(frame)
             landmarks = detectLandmarks(frame)
             if landmarks:
-                moveMouseWithNose(landmarks[0].landmark)
+                moveMouseWithNoseAndBlink(landmarks[0].landmark)
                 drawLandmarks(frame, landmarks[0].landmark)
-            cv2.imshow('Nose Controlled Mouse', frame)
+            cv2.imshow('Nose Controlled Mouse with Blink', frame)
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 break
         except Exception as e:
