@@ -6,7 +6,7 @@ import time
 import keyboard
 
 
-
+import pandas
 
 cam = cv2.VideoCapture(0)
 faceMesh = mp.solutions.face_mesh.FaceMesh(refine_landmarks=True)
